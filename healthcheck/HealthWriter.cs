@@ -90,7 +90,7 @@ public static class HealthWriter
                 .ToList();
         }
 
-        return new
+        var reportInfo = new
         {
             status = report.Status.ToString(),
             totalDuration = report.TotalDuration.ToString("c", CultureInfo.InvariantCulture), // use "c" format
@@ -98,6 +98,7 @@ public static class HealthWriter
             assemblies = _assemblies,
             entries
         };
+        return reportInfo;
     }
 
     /// <summary>
