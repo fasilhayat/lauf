@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- NuGet package settings -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>MyCompany.Yggdrasil.HealthCheck</PackageId>
+    <!-- Version managed by MinVer from git tags -->
+    <Authors>Fasil Malik Hayat</Authors>
+    <Company>MyCompany</Company>
+    <Description>HealthCheck library for ASP.NET Core with /healthz endpoint, UI-formatted JSON, and cross-platform TimeSpan support.</Description>
+    <PackageTags>healthcheck;aspnetcore;yggdrasil;monitoring;diagnostics;.net8</PackageTags>
+    <MinVerTagPrefix>healthcheck/</MinVerTagPrefix>
+    <RepositoryUrl>https://github.com/fasilhayat/oasis</RepositoryUrl>
+    <PackageOutputPath>$(OutputPath)</PackageOutputPath>
+    <!-- Logo -->
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\assets\icon.png" Pack="true" PackagePath="\" visible="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="7.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
