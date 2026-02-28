@@ -1,7 +1,4 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
+name: .NET lauf Build
 
 on:
   push:
@@ -15,9 +12,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Restore dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --no-restore
-      - name: Test
-        run: dotnet test --no-build --verbosity normal
+
+      - name: Detect changed packages
+        id: changed
+        run: |
+          changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/' | cut -d/ -f1 | sort -u)
+          echo "Changed packages: $changed"
+          echo "$changed" > changed.txt
+
+      - name: Build changed packages
+        run: |
+          for pkg in $(cat changed.txt); do
+            if ls "$pkg"/*.sln 1> /dev/null 2>&1 || ls "$pkg"/*.csproj 1> /dev/null 2>&1; then
+              echo "Building $pkg"
+              cd $pkg
+              dotnet restore
+              dotnet build --no-restore
+              dotnet test --no-build --verbosity normal
+              dotnet pack --no-build -c Release -o ./nupkg
+              cd ..
+            else
+              echo "Skipping $pkg: no solution/project found"
+            fi
+          done
