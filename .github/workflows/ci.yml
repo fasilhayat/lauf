@@ -41,7 +41,7 @@ jobs:
       
               dotnet clean
               dotnet restore
-              dotnet build
+              dotnet build -c Release
       
               mkdir -p ./nupkg
               dotnet pack -c Release -o ./nupkg
