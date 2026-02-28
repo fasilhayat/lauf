@@ -46,11 +46,13 @@ jobs:
           echo "$PUSH_LIST" > packages_to_push.txt
           cat packages_to_push.txt
 
-      - name: Push NuGet packages to Baget
-        run: |
-          ARTIFACTS_DIR="${{ steps.artifacts.outputs.artifact_dir }}"
-          while read pkg; do
-            [ -z "$pkg" ] && continue
-            echo "Pushing $pkg to Baget..."
-            dotnet nuget push "$pkg" --source "https://nuget.hayatnet.local/v3/index.json" --api-key "${{ secrets.BAGET_API_KEY }}"
-          done < packages_to_push.txt
+          - name: Push NuGet packages to nuget.hayatnet.local
+            run: |
+              ARTIFACTS_DIR="/home/fmh/actions-runner-lauf/artifacts"
+              for pkg in "$ARTIFACTS_DIR"/*.nupkg; do
+                echo "Pushing $pkg to Baget..."
+                dotnet nuget push "$pkg" \
+                  --source "https://nuget.hayatnet.local/v3/index.json" \
+                  --api-key "${{ secrets.BAGET_API_KEY }}" \
+                  --skip-duplicate
+              done
