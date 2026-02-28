@@ -10,49 +10,47 @@ jobs:
   push-packages:
     runs-on: [self-hosted, lauf]
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Locate CI artifacts
+      - name: Show CI artifacts
         run: |
           ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
           echo "Artifacts folder: $ARTIFACTS_DIR"
           ls -lh "$ARTIFACTS_DIR"
-          echo "::set-output name=artifact_dir::$ARTIFACTS_DIR"
-        id: artifacts
 
-      - name: Determine packages to push based on version
+      - name: Determine packages to push
         run: |
-          ARTIFACTS_DIR="${{ steps.artifacts.outputs.artifact_dir }}"
+          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
           PUSH_LIST=""
+          echo "Determining which packages need to be pushed..."
           for pkg in "$ARTIFACTS_DIR"/*.nupkg; do
-            # Extract version from the filename, assumes format: Name.Version.nupkg
             FILE_NAME=$(basename "$pkg")
-            PKG_NAME=$(echo $FILE_NAME | cut -d. -f1)
-            PKG_VERSION=$(echo $FILE_NAME | sed -E 's/.*\.([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?)\.nupkg/\1/')
-            
-            # Compare with Baget (pseudo-code, replace with actual API call)
-            # If this version does not exist in Baget, push
-            # Here we assume a script or command like: nuget list or REST API
-            if ! curl -s -f -u "user:password" "https://baget.hayatnet/download/v3/flatcontainer/$PKG_NAME/index.json" | grep -q "$PKG_VERSION"; then
+            PKG_NAME=$(echo "$FILE_NAME" | cut -d. -f1)
+            PKG_VERSION=$(echo "$FILE_NAME" | sed -E 's/.*\.([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?)\.nupkg/\1/')
+
+            # Check if package version exists in Baget
+            if ! curl -s -f "https://nuget.hayatnet.local/v3/flatcontainer/$PKG_NAME/index.json" | grep -q "$PKG_VERSION"; then
               echo "Will push: $FILE_NAME"
               PUSH_LIST="$PUSH_LIST $pkg"
             else
               echo "Skipping existing package: $FILE_NAME"
             fi
           done
+
+          # Save list for next step
           echo "$PUSH_LIST" > packages_to_push.txt
           cat packages_to_push.txt
 
-          - name: Push NuGet packages to nuget.hayatnet.local
-            run: |
-              ARTIFACTS_DIR="/home/fmh/actions-runner-lauf/artifacts"
-              for pkg in "$ARTIFACTS_DIR"/*.nupkg; do
-                echo "Pushing $pkg to Baget..."
-                dotnet nuget push "$pkg" \
-                  --source "https://nuget.hayatnet.local/v3/index.json" \
-                  --api-key "${{ secrets.BAGET_API_KEY }}" \
-                  --skip-duplicate
-              done
+      - name: Push NuGet packages to nuget.hayatnet.local
+        run: |
+          while read -r pkg; do
+            [ -z "$pkg" ] && continue
+            echo "Pushing $pkg to Baget..."
+            dotnet nuget push "$pkg" \
+              --source "https://nuget.hayatnet.local/v3/index.json" \
+              --api-key "${{ secrets.BAGET_API_KEY }}" \
+              --skip-duplicate
+          done < packages_to_push.txt
