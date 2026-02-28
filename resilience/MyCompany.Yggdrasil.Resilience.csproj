@@ -9,7 +9,7 @@
     <!-- Version managed by MinVer from git tags -->
     <Authors>Fasil Malik Hayat</Authors>
     <Company>MyCompany</Company>
-    <Description>Resilience library for ASP.NET Core with /healthz endpoint, UI-formatted JSON, and cross-platform TimeSpan support.</Description>
+    <Description>Resilience library for ASP.NET Core that provides reliable retries, backoff strategies, and guaranteed message delivery using Akka.NET actors, making your services fault-tolerant and highly available.</Description>
     <PackageTags>resilience;aspnetcore;yggdrasil;monitoring;diagnostics;.net8</PackageTags>
     <MinVerTagPrefix>resilience/</MinVerTagPrefix>
     <RepositoryUrl>https://github.com/fasilhayat/lauf</RepositoryUrl>
