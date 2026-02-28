@@ -31,21 +31,24 @@ jobs:
         run: |
           ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
           echo "=== Building and packing projects ==="
-          for pkg in $(ls lauf); do
-            if [ -d "lauf/$pkg" ] && (ls "lauf/$pkg"/*.sln 1> /dev/null 2>&1 || ls "lauf/$pkg"/*.csproj 1> /dev/null 2>&1); then
+          REPO_DIR="$GITHUB_WORKSPACE"
+      
+          # loop through first-level folders in repo
+          for pkg in $(ls "$REPO_DIR"); do
+            if [ -d "$REPO_DIR/$pkg" ] && (ls "$REPO_DIR/$pkg"/*.sln 1> /dev/null 2>&1 || ls "$REPO_DIR/$pkg"/*.csproj 1> /dev/null 2>&1); then
               echo "Processing $pkg"
-              cd "lauf/$pkg"
-
+              cd "$REPO_DIR/$pkg"
+      
               dotnet clean
               dotnet restore
               dotnet build
-
+      
               mkdir -p ./nupkg
               dotnet pack -c Release -o ./nupkg
-
+      
               cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/" || echo "No nupkg found for $pkg"
-
-              cd ../../
+      
+              cd "$REPO_DIR"
             else
               echo "Skipping $pkg: no solution/project found"
             fi
