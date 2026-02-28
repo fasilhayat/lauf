@@ -1,8 +1,8 @@
-name: .NET lauf CD
+name: .net lauf cd
 
 on:
   workflow_run:
-    workflows: [".NET lauf Build"]
+    workflows: [".net lauf build"]
     types:
       - completed
 
