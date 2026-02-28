@@ -1,4 +1,4 @@
-name: .NET lauf Build
+name: .net lauf build
 
 on:
   push:
