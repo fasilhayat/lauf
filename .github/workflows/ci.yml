@@ -13,6 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare artifacts folder
+        run: |
+          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
+          rm -rf "$ARTIFACTS_DIR/*"
+          mkdir -p "$ARTIFACTS_DIR"
+
       - name: Detect changed packages
         id: changed
         run: |
@@ -23,20 +29,39 @@ jobs:
       - name: Build changed packages
         run: |
           ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
-          mkdir -p "$ARTIFACTS_DIR"
           
           for pkg in $(cat changed.txt); do
             if ls "$pkg"/*.sln 1> /dev/null 2>&1 || ls "$pkg"/*.csproj 1> /dev/null 2>&1; then
               echo "Building $pkg"
               cd $pkg
+
+              # Restore dependencies first
               dotnet restore
+
+              # Build the project (no restore needed)
               dotnet build --no-restore
+
+              # Run tests (no build needed)
               dotnet test --no-build --verbosity normal
+
+              # Create nupkg folder and pack
+              mkdir -p ./nupkg
               dotnet pack --no-build -c Release -o ./nupkg
+
+              # Debug: list the generated packages
+              echo "Generated packages in $pkg/nupkg:"
+              ls -l ./nupkg
+
               # Copy the generated .nupkg files to the centralized artifacts folder
               cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/"
+
               cd ..
             else
               echo "Skipping $pkg: no solution/project found"
             fi
           done
+
+      - name: Show centralized artifacts
+        run: |
+          echo "All NuGet packages collected in $HOME/actions-runner-lauf/artifacts:"
+          ls -l "$HOME/actions-runner-lauf/artifacts"
