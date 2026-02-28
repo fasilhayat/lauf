@@ -11,31 +11,19 @@ jobs:
     runs-on: [self-hosted, lauf]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Prepare centralized artifacts folder
+      - name: Prepare artifacts folder
         run: |
           ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
           rm -rf "$ARTIFACTS_DIR/*"
           mkdir -p "$ARTIFACTS_DIR"
-          echo "Artifacts will be collected in $ARTIFACTS_DIR"
 
-      - name: Detect changed packages
-        id: changed
-        run: |
-          # Grab all top-level folders under lauf/ that have changes
-          changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
-            | grep '/' | cut -d/ -f2 | sort -u)
-          echo "Changed packages detected: $changed"
-          echo "$changed" > changed.txt
-
-      - name: Build, test, pack changed packages
+      - name: Build, test, pack all packages
         run: |
           ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
 
-          for pkg in $(cat changed.txt); do
-            # Verify the package folder exists and contains a .sln or .csproj
+          for pkg in $(ls lauf); do
             if [ -d "lauf/$pkg" ] && (ls "lauf/$pkg"/*.sln 1> /dev/null 2>&1 || ls "lauf/$pkg"/*.csproj 1> /dev/null 2>&1); then
               echo "=== Building package: $pkg ==="
               cd "lauf/$pkg"
@@ -43,31 +31,26 @@ jobs:
               # Restore dependencies
               dotnet restore
 
-              # Build the project (skip restore since done)
+              # Build project
               dotnet build --no-restore
 
               # Run tests
               dotnet test --no-build --verbosity normal || echo "Tests failed for $pkg (continuing build)"
 
-              # Create output folder and pack
+              # Pack into local folder
               mkdir -p ./nupkg
-              dotnet pack --no-build -c Release -o ./nupkg
+              dotnet pack -c Release -o ./nupkg
 
-              # Debug: list generated packages
-              echo "Generated packages for $pkg:"
-              ls -l ./nupkg
-
-              # Copy packages to centralized artifacts folder
+              # Copy nupkg to centralized artifacts
               cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/"
 
               cd ../../
             else
-              echo "Skipping $pkg: no solution/project found in lauf/$pkg"
+              echo "Skipping $pkg: no solution/project found"
             fi
           done
 
-      - name: Show centralized artifacts
+      - name: Show artifacts
         run: |
-          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
-          echo "All NuGet packages collected in $ARTIFACTS_DIR:"
-          ls -l "$ARTIFACTS_DIR"
+          echo "All NuGet packages collected in $HOME/actions-runner-lauf/artifacts:"
+          ls -l "$HOME/actions-runner-lauf/artifacts"
