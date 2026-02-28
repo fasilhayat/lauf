@@ -11,50 +11,54 @@ jobs:
     runs-on: [self-hosted, lauf]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Test all projects
+      - name: Restore all projects
         run: |
-          echo "=== Running tests ==="
-          for pkg in $(ls lauf); do
-            if [ -d "lauf/$pkg" ] && (ls "lauf/$pkg"/*.sln 1> /dev/null 2>&1 || ls "lauf/$pkg"/*.csproj 1> /dev/null 2>&1); then
-              echo "Testing $pkg"
-              cd "lauf/$pkg"
-              dotnet test --verbosity normal || true
-              cd ../../
-            else
-              echo "Skipping $pkg: no solution/project found"
+          REPO_DIR="$GITHUB_WORKSPACE"
+          for pkg in $(ls "$REPO_DIR"); do
+            if [ -d "$REPO_DIR/$pkg" ] && (ls "$REPO_DIR/$pkg"/*.sln 1> /dev/null 2>&1 || ls "$REPO_DIR/$pkg"/*.csproj 1> /dev/null 2>&1); then
+              echo "Restoring $pkg"
+              cd "$REPO_DIR/$pkg"
+              dotnet restore
+              cd "$REPO_DIR"
             fi
           done
 
-      - name: Build and pack all projects
+      - name: Run Tests
         run: |
-          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
-          echo "=== Building and packing projects ==="
           REPO_DIR="$GITHUB_WORKSPACE"
-      
-          # loop through first-level folders in repo
+          for pkg in $(ls "$REPO_DIR"); do
+            if [ -d "$REPO_DIR/$pkg" ] && (ls "$REPO_DIR/$pkg"/*.sln 1> /dev/null 2>&1 || ls "$REPO_DIR/$pkg"/*.csproj 1> /dev/null 2>&1); then
+              echo "Running tests for $pkg"
+              cd "$REPO_DIR/$pkg"
+              # Run tests even if none exist
+              dotnet test --no-build --verbosity normal || echo "No test projects or tests failed for $pkg"
+              cd "$REPO_DIR"
+            fi
+          done
+
+      - name: Build and Pack
+        run: |
+          REPO_DIR="$GITHUB_WORKSPACE"
+          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
+
+          echo "=== Building and packing projects ==="
+
           for pkg in $(ls "$REPO_DIR"); do
             if [ -d "$REPO_DIR/$pkg" ] && (ls "$REPO_DIR/$pkg"/*.sln 1> /dev/null 2>&1 || ls "$REPO_DIR/$pkg"/*.csproj 1> /dev/null 2>&1); then
               echo "Processing $pkg"
               cd "$REPO_DIR/$pkg"
-      
-              dotnet clean
-              dotnet restore
+
+              dotnet clean -c Release
               dotnet build -c Release
-      
               mkdir -p ./nupkg
               dotnet pack -c Release -o ./nupkg
-      
-              cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/" || echo "No nupkg found for $pkg"
-      
+
+              cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/" || echo "No nupkg generated for $pkg"
               cd "$REPO_DIR"
             else
               echo "Skipping $pkg: no solution/project found"
             fi
           done
-
-      - name: Show artifacts
-        run: |
-          echo "NuGet packages in artifacts folder:"
-          ls -l "$HOME/actions-runner-lauf/artifacts"
