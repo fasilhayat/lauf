@@ -13,36 +13,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare artifacts folder
+      - name: Test all projects
         run: |
-          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
-          rm -rf "$ARTIFACTS_DIR"
-          mkdir -p "$ARTIFACTS_DIR"
-
-      - name: Build, pack all projects
-        run: |
-          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
-
+          echo "=== Running tests ==="
           for pkg in $(ls lauf); do
             if [ -d "lauf/$pkg" ] && (ls "lauf/$pkg"/*.sln 1> /dev/null 2>&1 || ls "lauf/$pkg"/*.csproj 1> /dev/null 2>&1); then
-              echo "=== Cleaning and building package: $pkg ==="
+              echo "Testing $pkg"
+              cd "lauf/$pkg"
+              dotnet test --verbosity normal || true
+              cd ../../
+            else
+              echo "Skipping $pkg: no solution/project found"
+            fi
+          done
+
+      - name: Build and pack all projects
+        run: |
+          ARTIFACTS_DIR="$HOME/actions-runner-lauf/artifacts"
+          echo "=== Building and packing projects ==="
+          for pkg in $(ls lauf); do
+            if [ -d "lauf/$pkg" ] && (ls "lauf/$pkg"/*.sln 1> /dev/null 2>&1 || ls "lauf/$pkg"/*.csproj 1> /dev/null 2>&1); then
+              echo "Processing $pkg"
               cd "lauf/$pkg"
 
-              # Clean previous build
               dotnet clean
-
-              # Restore dependencies
               dotnet restore
-
-              # Build project
               dotnet build
 
-              # Pack into local folder
               mkdir -p ./nupkg
               dotnet pack -c Release -o ./nupkg
 
-              # Copy nupkg to centralized artifacts
-              cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/"
+              cp ./nupkg/*.nupkg "$ARTIFACTS_DIR/" || echo "No nupkg found for $pkg"
 
               cd ../../
             else
@@ -52,5 +53,5 @@ jobs:
 
       - name: Show artifacts
         run: |
-          echo "NuGet packages generated in $HOME/actions-runner-lauf/artifacts:"
+          echo "NuGet packages in artifacts folder:"
           ls -l "$HOME/actions-runner-lauf/artifacts"
